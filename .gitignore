@@ -1,0 +1,536 @@
+' Name:         SAC Report Excel Macro
+' Author:       Neil Monreal
+' Date:         10.28.2008
+
+Public Const strMenuname = "SAC_Reports"
+Public Const strMenuitem = "Generate Report"
+Public Const strMenuFormatitem = "Format MTTE"
+Public Const strMenuExit = "Exit Menu"
+
+Public Const strWithHarmless = "SAC Monthly MTTE" ' Name of With Harmless sheet- weekly
+Public Const strEventType = "EventType" ' Name of Eventtype sheet
+
+Public Const strSeverityReport = "Severity Report"
+Public Const strAeraReport = "AREA Report"
+Public Const strEventTypeReport = "Top 3 Event Type"
+Public Const strMTTERange = "MTTE Range"
+Public Const strQnQ = "Q&Q"
+Public Const strQnQChart = "Q&Q Chart"
+
+'This MACRO assumes Data with Labels starts at cells(2,1)
+Public Const DataStart_RI = 2
+Public Const DataStart_CI = 1
+
+Dim LastRow As Long
+Dim LastColumn As Long
+
+
+Sub Auto_Open()
+    PivotMenuCreation
+End Sub
+
+Sub PivotMenuCreation()
+
+    ' Delete existing Menu if any
+    Dim ctrl, mnuPivot As CommandBarControl
+    Dim mnubtGenerate, mnubtExit, mnubtFormat As CommandBarButton
+    
+    For Each ctrl In Application.CommandBars("Worksheet Menu Bar").Controls
+        If ctrl.Caption = strMenuname Then
+            ctrl.Delete
+            Exit For
+        End If
+    Next
+
+' Creation of Menu
+    Set ctrl = Nothing
+    Set mnuPivot = Application.CommandBars("Worksheet Menu Bar").Controls.Add(msoControlPopup, , , 8, True)
+    With mnuPivot
+        .Caption = strMenuname
+     End With
+     
+    Set mnubtFormat = mnuPivot.Controls.Add(msoControlButton, , , , True)
+    With mnubtFormat
+        .Caption = strMenuFormatitem
+        .OnAction = "SacFormatReport"
+    End With
+    
+    Set mnubtGenerate = mnuPivot.Controls.Add(msoControlButton, , , , True)
+    With mnubtGenerate
+        .Caption = strMenuitem
+        .OnAction = "CreateSeverityReport"
+    End With
+    
+'    Set mnubtExit = mnuPivot.Controls.Add(msoControlButton, , , , True)
+'    With mnubtExit
+'        .Caption = strMenuExit
+'        .OnAction = "Top3ReportMenuExit"
+'    End With
+'#    MsgBox " Menu created "
+ 
+End Sub
+
+Sub SacFormatReport()
+
+    Rows("1:1").Select
+    Selection.Insert Shift:=xlDown
+    
+    Columns("A:A").Select
+    Selection.Insert Shift:=xlToRight
+    Range("A2").Select
+    ActiveCell.FormulaR1C1 = "AREA"
+    
+    Columns("A:A").Select
+    Selection.Insert Shift:=xlToRight
+    Range("A2").Select
+    ActiveCell.FormulaR1C1 = "MTTE"
+    
+    Columns("A:A").Select
+    Selection.Insert Shift:=xlToRight
+    Range("A2").Select
+    ActiveCell.FormulaR1C1 = "MTTE RANGE"
+    
+    Columns("A:A").Select
+    Selection.Insert Shift:=xlToRight
+    Range("A2").Select
+    ActiveCell.FormulaR1C1 = "TAG"
+    
+    Columns("L:L").Select
+    Selection.Replace What:="-", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    Columns("AB:AB").Select
+    Selection.Replace What:="-", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    Columns("J:L").Select
+    Selection.Replace What:=".", Replacement:="/", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        
+    SacArea
+     
+End Sub
+
+Sub SacArea()
+
+'Set formula for AREA
+
+  Dim R As Range, C As Range
+  'Get the used cells in column A
+  Set R = Range(Range("E3"), Range("E" & Rows.Count).End(xlUp))
+  'Map it to column D3
+  Set R = R.Offset(0, -1)
+  'Apply a formula for the sort criteria
+  R(1).Formula = "=IF(ISNUMBER(SEARCH(""sitescope"",U3)),""SITESCOPE"",(IF(ISNUMBER(SEARCH(""oracle"",U3)),""ORACLE"",(IF(ISNUMBER(SEARCH(""backup"",U3)),""BACKUP"",(IF(ISNUMBER(SEARCH(""windows"",Q3)),""WINDOWS"",(IF(ISNUMBER(SEARCH(""oragrid"",X3)),""ORACLE"",""UNIX"")))))))))"
+  'Fill the formula down
+  R.FillDown
+  'Selection.AutoFill Destination:=Range("A3:A" & Range("A65536").End(xlUp).Row)
+  'Range("A3" & R).FillDown
+  'Range("A3").AutoFill Destination:=Range("A3:A65536")
+  'Range("A4:A50000").Select
+  'Range("A3").FillDown
+  
+'Set formula for MTTE
+
+  'Get the used cells in column A
+  Set R = Range(Range("D3"), Range("D" & Rows.Count).End(xlUp))
+  'Map it to column C3
+  Set R = R.Offset(0, -1)
+  'Apply a formula for the sort criteria
+  R(1).Formula = "=(L3-J3)*24*60"
+  'Fill the formula down
+  R.FillDown
+  
+'Set formula for MTTE Range
+
+  'Get the used cells in column A
+  Set R = Range(Range("C3"), Range("C" & Rows.Count).End(xlUp))
+  'Map it to column B3
+  Set R = R.Offset(0, -1)
+  'Apply a formula for the sort criteria
+  R(1).Formula = "=IF(C3<1,""Less than 1min"",IF(C3>=1,IF(C3<=5,""Betw 1-5min"",IF(C3>5,IF(C3<=10,""Betn 5-10min"",IF(C3>10,IF(C3<=30,""betn 10-30MIN"",""Greater than 30min"")))))))"
+  'Fill the formula down
+  R.FillDown
+  
+'Set formula for TAG
+
+  'Get the used cells in column A
+  Set R = Range(Range("B3"), Range("B" & Rows.Count).End(xlUp))
+  'Map it to column A3
+  Set R = R.Offset(0, -1)
+  'Apply a formula for the sort criteria
+  R(1).Formula = "=IF(AH3=""[]"",""ZZZS"",MID(AH3,FIND(""ZZZ"",AH3),4))"
+  'Fill the formula down
+  R.FillDown
+
+End Sub
+
+Sub RequireSheet()
+    '************* SUB for getting sheet for use ********************
+    ' The below logic assumes - existing unused/new sheets are available/created on the right side
+    If ActiveSheet.Index = Sheets.Count Then
+    '#        MsgBox "No Sheets available!! Inserting New sheet"
+            'Application.Sheets.Add Before:="", After:=ActiveSheet
+            ActiveWorkbook.Sheets.Add after:=ActiveSheet
+    Else
+            
+            Sheets((ActiveSheet.Index + 1)).Select
+                        
+    End If
+End Sub
+
+Function CreateSeverityReport()
+  
+    If Sheets(1).Name <> strWithHarmless Then
+        Sheets(1).Name = strWithHarmless
+    End If
+    Dim Dialog As Integer
+            
+   ' Delete any existing Pivot Severity
+    Dim Shtchk, ShtDel As Worksheet
+    Application.DisplayAlerts = False
+    For Each Shtchk In Application.Sheets
+        If Shtchk.Name = strSeverityReport Then
+               Dialog = MsgBox("Report already exist! Do you want to create a new one? ", vbYesNo + vbQuestion)
+               
+               If Dialog = vbYes Then
+                    For Each ShtDel In Application.Sheets
+                        If ShtDel.Name <> strWithHarmless Then
+                            ShtDel.Delete
+                        End If
+                    Next
+                    ' As 2 new columns were inserted at the beginning,will delete first 2 columns  to reset the report.
+'                    Sheets(strWithHarmless).Columns("A:B").Delete
+                    Columns("A:B").Delete ' Deleting Column AERA and APPLICATION_CALCULATED to reset the report
+                    MsgBox "Previously generated reports were deleted! To create one, please use ""Generate Report""", vbInformation
+                    Application.DisplayAlerts = True
+                    Exit Function
+               Else
+                    MsgBox "Already generated Reports stays!!!", vbExclamation
+                    Exit Function
+               End If
+               
+        End If
+    Next
+    
+    LastColumn = ActiveSheet.Cells(DataStart_RI, Columns.Count).End(xlToLeft).Column
+    LastRow = ActiveSheet.Cells(Rows.Count, DataStart_CI).End(xlUp).Row
+    ' Deleting Column "ID" if exist
+     
+    Dim FieldIndex_ID As Integer
+    FieldIndex_ID = DetermineFieldIndex("ID", DataStart_RI, LastColumn)
+    ' FieldIndex = 0 , Column "ID" not present
+    If FieldIndex_ID <> 0 Then
+        Columns(FieldIndex_ID).Select
+        Selection.Delete
+    End If
+              
+    'PIVOT TABLE CREATION
+    Dim pt As PivotTable
+        
+    'LastRow = ActiveSheet.Cells(Rows.Count, DataStart_CI).End(xlUp).Row
+'    LastColumn = ActiveSheet.Cells(DataStart_RI, Columns.Count).End(xlToLeft).Column
+    Range(Cells(DataStart_RI, DataStart_CI), Cells(LastRow, LastColumn)).Select
+    Selection.Name = "Items"
+     
+  
+  
+  ' 1. Move to the next available sheet. Need to Add sheet if needed
+  
+    RequireSheet
+    ActiveSheet.Name = strSeverityReport
+    
+      
+        
+    '2. Creating Pivot cache and then pivot table
+     
+    ActiveWorkbook.PivotCaches.Add(SourceType:=xlDatabase, SourceData:="Items").CreatePivotTable _
+     TableDestination:=ActiveSheet.Cells(3, 1), Tablename:="PvtSeverity"
+    Set pt = ActiveSheet.PivotTables("PvtSeverity")
+    
+        
+    '3. Pivot table settings
+    
+        
+    pt.PivotFields("Day").Orientation = xlRowField
+    pt.PivotFields("Severity").Orientation = xlColumnField
+    pt.PivotFields("Message").Orientation = xlDataField
+    
+   
+    CreateAeraReport
+    
+End Function
+
+Sub CreateAeraReport()
+    
+    Dim pt As PivotTable
+   
+   With Sheets(strWithHarmless)
+        Range(.Cells(DataStart_RI, DataStart_CI), .Cells(LastRow, LastColumn)).Name = "NewItems"
+    End With
+'  Sheets(strWithHarmless).Range(Cells(DataStart_RI, DataStart_CI), Cells(LastRow, LastColumn)).Name = "NewItems"
+ 
+    RequireSheet
+    ActiveSheet.Name = strAeraReport
+    
+     ActiveWorkbook.PivotCaches.Add(SourceType:=xlDatabase, SourceData:="NewItems").CreatePivotTable _
+     TableDestination:=ActiveSheet.Cells(3, 1), Tablename:="PvtAera"
+    
+    Set pt = ActiveSheet.PivotTables("PvtAera")
+    
+    pt.PivotFields("Area").Orientation = xlRowField
+    pt.PivotFields("Severity").Orientation = xlColumnField
+    pt.PivotFields("Message").Orientation = xlDataField
+           
+    CreateEventTypeSheet
+     
+End Sub
+
+Function DetermineFieldIndex(strField As String, HeaderStartRow As Long, LastColumn As Long) As Integer
+
+For i = DataStart_CI To LastColumn
+    If Cells(HeaderStartRow, i).Value = strField Then
+        DetermineFieldIndex = i
+        Exit For
+    End If
+ Next
+
+End Function
+
+Sub CreateEventTypeSheet()
+    
+    Dim Current_Sheet_Name As String 'To hold the current sheet name
+    Dim pt As PivotTable
+    
+    Current_Sheet_Name = ActiveSheet.Name
+    'Selecting the required data in pivot to expand
+    Set pt = ActiveSheet.PivotTables("PvtAera")
+    pt.PivotFields("Severity").PivotItems("ok").Visible = False
+    pt.TableRange1.Resize(1, 1).Offset(pt.TableRange1.Rows.Count - 1, pt.TableRange1.Columns.Count - 1).Select
+   
+    Selection.ShowDetail = True
+    Range("A1").EntireRow.Insert 'Inserting blank row at the beginning
+    ActiveSheet.Move after:=Worksheets(Current_Sheet_Name) ' Moving the sheet to the right end
+    ActiveSheet.Name = strEventType
+    
+    'Resetting the fileds to ALL
+    pt.PivotFields("Severity").PivotItems("ok").Visible = True
+ 
+
+    CreateEventTypeReport
+ 
+End Sub
+
+Sub CreateEventTypeReport()
+
+    Dim pt As PivotTable
+    Dim PivotStartRow As Integer
+    PivotStartRow = 2 'Pivot starting Row
+ 
+    'Marking the data
+    Range(Cells(DataStart_RI, DataStart_CI), Cells(LastRow, LastColumn)).Name = "NewItems"
+ 
+    RequireSheet
+    ActiveSheet.Name = strEventTypeReport
+    
+    ' Pivot table creation
+    ActiveWorkbook.PivotCaches.Add(SourceType:=xlDatabase, SourceData:="NewItems").CreatePivotTable _
+    TableDestination:=ActiveSheet.Cells(PivotStartRow, 1), Tablename:="PvtEventType"
+    Set pt = ActiveSheet.PivotTables("PvtEventType")
+    
+    pt.PivotFields("IfH Key").Orientation = xlRowField
+    pt.PivotFields("Day").Orientation = xlColumnField
+    pt.PivotFields("Message").Orientation = xlDataField
+    
+    'Formatting Pivottable columns
+    With pt.DataBodyRange.Borders
+        .LineStyle = xlSlantDashDot
+        .Weight = xlThin
+    End With
+    pt.ColumnRange.Columns.AutoFit
+    
+    'Formatting Pivottable Row
+    With pt.RowRange.Borders
+        .LineStyle = xlDash
+        .Weight = xlThin
+    End With
+    ' SORTING BY GRAND TOTAL AND DETERMINING OTHER COLUMNS
+    
+    '    Dim GrandFieldIndex As Integer
+    '    GrandFieldIndex = DetermineFieldIndex("Grand Total", PivotStartRow + 1, pt.TableRange1.Columns.Count
+    'ActiveSheet.Cells(PivotStartRow + 2, GrandFieldIndex).Sort Key1:=ActiveSheet.Cells(PivotStartRow + 2, GrandFieldIndex),Order1:=xlDescending
+    pt.PivotFields("ifh key").AutoSort xlDescending, "Count of message"
+      
+    ' Getting the Total
+    pt.TableRange1.Resize(1, 1).Offset(pt.TableRange1.Rows.Count - 1, pt.TableRange1.Columns.Count - 1).Select
+    Dim Event_Total As Long
+    Event_Total = Selection.Value
+    Dim Last_Row_Index As Long
+    Last_Row_Index = ActiveCell.Offset(-1).Row ' Excluding Grand total Row
+         
+    ' Calculating Percentage
+    Dim PercentFieldIndex As Integer
+    PercentFieldIndex = pt.TableRange1.Columns.Count + 1
+    Cells(PivotStartRow + 1, PercentFieldIndex).Select
+    ActiveCell.Value = "Percentage"
+    ActiveCell.Offset(1).Select
+        
+    
+    For i = ActiveCell.Row To Last_Row_Index
+        Cells(i, PercentFieldIndex).Value = Cells(i, PercentFieldIndex - 1).Value / Event_Total
+    Next i
+    
+    Range(Cells(PivotStartRow + 2, PercentFieldIndex), Cells(Last_Row_Index, PercentFieldIndex)).Name = "Items"
+    Range("Items").NumberFormat = "0%"
+    Range("Items").Resize(pt.TableRange1.Rows.Count - 1).Offset(-1).Select
+    
+    With Range("Items").Borders
+        .LineStyle = xlSlantDashDot
+        .Weight = xlThin
+    End With
+ 
+    'Calculating Pareto
+    Dim ParetoFieldIndex As Integer
+    ParetoFieldIndex = PercentFieldIndex + 1
+    Cells(PivotStartRow + 1, ParetoFieldIndex).Select
+    ActiveCell.Value = "Pareto"
+    ActiveCell.Offset(1).Select
+     
+    
+    ActiveCell.Value = ActiveCell.Offset(, -1).Value ' setting first pareto value same as first percentage
+      
+    For i = ActiveCell.Offset(1).Row To Last_Row_Index  ' from 2nd Pareto
+         Cells(i, ParetoFieldIndex).Value = Cells(i - 1, ParetoFieldIndex).Value + Cells(i, PercentFieldIndex).Value
+    Next i
+ 
+    Range(Cells(PivotStartRow + 2, ParetoFieldIndex), Cells(Last_Row_Index, ParetoFieldIndex)).Name = "Items"
+    Range("Items").NumberFormat = "0%"
+    Range("Items").Offset(-1).Resize(pt.TableRange1.Rows.Count - 1).Select
+    
+    
+    With Range("Items").Borders
+        .LineStyle = xlSlantDashDot
+        .Weight = xlThin
+    End With
+ 
+    
+    ' Assigning ranks
+    Dim RankFieldIndex As Integer
+    RankFieldIndex = ParetoFieldIndex + 1
+    Cells(PivotStartRow + 1, RankFieldIndex).Select
+'    Cells(PivotStartRow + 1, ParetoFieldIndex + 1).Value = "Ranking"
+    ActiveCell.Value = "Ranking"
+    ActiveCell.Offset(1, 0).Select
+    ActiveCell.Value = 1
+        
+    Range(ActiveCell, Cells(Last_Row_Index, RankFieldIndex)).Name = "Rank"
+    ActiveCell.AutoFill Destination:=Range("Rank"), Type:=xlFillSeries
+    
+    
+    Range("Rank").NumberFormat = "General"
+    Range("Rank").Offset(-1).Resize(pt.TableRange1.Rows.Count - 1).Select
+    
+    With Range("Rank").Borders
+        .LineStyle = xlSlantDashDot
+        .Weight = xlThin
+    End With
+    
+    ' Determining the 80 % event type and colour coding
+    Dim Top_80Per_RI As Integer
+    Cells(PivotStartRow + 2, ParetoFieldIndex).Select
+    
+     For i = ActiveCell.Row To Last_Row_Index
+        If ActiveCell.Value > 0.81 Then
+            Top_80Per_RI = i - 1
+            Exit For
+        Else
+            ActiveCell.Offset(1, 0).Select
+        End If
+    Next i
+    
+    ' Leaving TOP 3 without colour coding
+    Range(Cells(PivotStartRow + 5, 1), Cells(Top_80Per_RI, RankFieldIndex)).Name = "TOP"
+    Range("TOP").Interior.ColorIndex = 36 ' Yellow
+    
+    'Formatting Heading
+    Range(Cells(PivotStartRow + 1, 1), Cells(PivotStartRow + 1, RankFieldIndex)).Name = "Heading"
+    Range("Heading").Font.Bold = True
+ 
+    Range("Heading").Interior.ColorIndex = 35
+    With Range("Heading").Borders
+        .LineStyle = xlContinuous
+        .Weight = xlMedium
+    End With
+    
+    CreateMTTERange
+        
+End Sub
+
+Sub CreateMTTERange()
+    
+    Dim pt As PivotTable
+   
+   With Sheets(strEventType)
+        Range(.Cells(DataStart_RI, DataStart_CI), .Cells(LastRow, LastColumn)).Name = "NewItems"
+    End With
+'  Sheets(strWithHarmless).Range(Cells(DataStart_RI, DataStart_CI), Cells(LastRow, LastColumn)).Name = "NewItems"
+ 
+    RequireSheet
+    ActiveSheet.Name = strMTTERange
+    
+     ActiveWorkbook.PivotCaches.Add(SourceType:=xlDatabase, SourceData:="NewItems").CreatePivotTable _
+     TableDestination:=ActiveSheet.Cells(3, 1), Tablename:="PvtMTTERange"
+    
+    Set pt = ActiveSheet.PivotTables("PvtMTTERange")
+    
+    pt.PivotFields("IfH Key").Orientation = xlRowField
+    pt.PivotFields("MTTE RANGE").Orientation = xlPageField
+    pt.PivotFields("Incident ID").Orientation = xlDataField
+           
+    CreateQnQ
+     
+End Sub
+
+Sub CreateQnQ()
+    
+    Dim pt As PivotTable
+   
+   With Sheets(strEventType)
+        Range(.Cells(DataStart_RI, DataStart_CI), .Cells(LastRow, LastColumn)).Name = "NewItems"
+    End With
+'  Sheets(strWithHarmless).Range(Cells(DataStart_RI, DataStart_CI), Cells(LastRow, LastColumn)).Name = "NewItems"
+ 
+    RequireSheet
+    ActiveSheet.Name = strQnQ
+    
+     ActiveWorkbook.PivotCaches.Add(SourceType:=xlDatabase, SourceData:="NewItems").CreatePivotTable _
+     TableDestination:=ActiveSheet.Cells(3, 1), Tablename:="PvtQnQ"
+    
+    Set pt = ActiveSheet.PivotTables("PvtQnQ")
+    
+    pt.PivotFields("TAG").Orientation = xlRowField
+    ' pt.PivotFields("MTTE RANGE").Orientation = xlPageField
+    pt.PivotFields("Message").Orientation = xlDataField
+           
+    CreateQnQChart
+         
+End Sub
+
+Sub CreateQnQChart()
+
+    'RequireSheet
+    'ActiveSheet.Name = strQnQChart
+    
+    Range("B10").Select
+    Charts.Add
+    ActiveChart.ChartType = xlPie
+    ActiveChart.SetSourceData Source:=Sheets("Q&Q").Range("B10")
+    ActiveChart.Location Where:=xlLocationAsNewSheet, Name:="Q&Q Chart"
+    ActiveChart.ApplyDataLabels AutoText:=True, LegendKey:=False, _
+        HasLeaderLines:=True, ShowSeriesName:=False, ShowCategoryName:=True, _
+        ShowValue:=False, ShowPercentage:=True, ShowBubbleSize:=False
+    ' ActiveChart.ChartArea.Select
+    
+    
+End Sub
